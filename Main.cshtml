@@ -133,7 +133,8 @@ string sJSON = oSerializer.Serialize(productProperties);
 					var inputFields=$("#mainTable .newProductInput");
 					var data="action=createProduct";
 					inputFields.each(function(key, value) {
-						data+="&"+value.name+"="+value.textContent;
+						if (value.textContent)
+							data+="&"+value.name+"="+value.textContent;
 					});
 				alert (data);
 					$.ajax( {
@@ -159,9 +160,9 @@ string sJSON = oSerializer.Serialize(productProperties);
 				function cellOnFocus(target) {
 					cellOriginalValue=target.textContent;
 				}
-				function cellOnBlur(target) {
+				function cellOnBlur(target) {@*When a cell loses focus and has been changed it should post a updateCell-command*@
 					if (target.textContent!=cellOriginalValue) {
-				var data="action=updateCell&productId:"+target.productId+"&productHeader:"+target.productHeader+"&newValue:"+target.textContent;
+				var data="action=updateCell&productId="+target.getAttribute("productId")+"&productHeader="+target.getAttribute("productHeader")+"&newValue="+target.textContent;
 						$.ajax( {
 							type: 'POST',
 							url: 'commands.cshtml',

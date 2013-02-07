@@ -1,27 +1,35 @@
 ﻿@{//This file contains all the AJAX request-responses
-    List<string>keys=new List<string>();//Will hold keys from the Quest.Form. It's in form of List rather than array because it's length is yet unknown. First have to see how many form-values that are not to be passed to db-object that are present
+    List<string>keys=new List<string>();//Will hold keys from the request.Form. It's in form of List rather than array because it's length is yet unknown. First have to see how many form-values that are not to be passed to db-object that are present
     object[] values;//Will hold values pointed to by keys ^
     var db = Database.Open("products");
-    foreach (string key in Request.Form.Keys) {//Get all keys in first loop so 
-        if (key!="action") {
-            if (Request.Form[key]!="") {
-                keys.Add(key);
-            }
-        }
-    }
-    string queryCommand = "INSERT INTO products ("+string.Join(", ", keys.ToArray())+", category) VALUES(";
-    values=new object[keys.Count+1];
-    for (var i=0; i<keys.Count; i++){
-        values[i]=Request.Form[keys[i]];
-        if (i>0) {
-            queryCommand+=", ";
-        }
-        queryCommand+="@"+i;
-    }
-    queryCommand+=", @"+keys.Count+")";
-    values[keys.Count]="sjokolade";
-    db.Execute(queryCommand, values);
-
+	switch (Request.Form["action"]) {
+		case "createProduct":
+			foreach (string key in Request.Form.Keys) {
+				if (key!="action") {
+					if (Request.Form[key]!="") {
+						keys.Add(key);
+					}
+				}
+			}
+			string queryCommand = "INSERT INTO products ("+string.Join(", ", keys.ToArray())+", category) VALUES(";
+			values=new object[keys.Count+1];
+			for (var i=0; i<keys.Count; i++){
+				values[i]=Request.Form[keys[i]];
+				if (i>0) {
+					queryCommand+=", ";
+				}
+				queryCommand+="@"+i;
+			}
+			queryCommand+=", @"+keys.Count+")";
+			values[keys.Count]="sjokolade";
+			db.Execute(queryCommand, values);
+		break;
+		case "updateCell":
+			//var updateCommand = "UPDATE products SET Title=@0, Genre=@1, Year=@2 WHERE Id=@3";
+			var updateCommand = "UPDATE products SET "+Request.Form["productHeader"]+"=@0 WHERE id=@1";
+			db.Execute(updateCommand, Request.Form["newValue"], Request.Form["productId"]);
+		break;
+	}
 }
 @* //JS-function for testing functionality of this file
 function post_to_url(path, params, method) {
