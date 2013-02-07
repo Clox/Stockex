@@ -1,0 +1,51 @@
+﻿@{//This file contains all the AJAX request-responses
+    List<string>keys=new List<string>();//Will hold keys from the Quest.Form. It's in form of List rather than array because it's length is yet unknown. First have to see how many form-values that are not to be passed to db-object that are present
+    object[] values;//Will hold values pointed to by keys ^
+    var db = Database.Open("products");
+    foreach (string key in Request.Form.Keys) {//Get all keys in first loop so 
+        if (key!="action") {
+            if (Request.Form[key]!="") {
+                keys.Add(key);
+            }
+        }
+    }
+    string queryCommand = "INSERT INTO products ("+string.Join(", ", keys.ToArray())+", category) VALUES(";
+    values=new object[keys.Count+1];
+    for (var i=0; i<keys.Count; i++){
+        values[i]=Request.Form[keys[i]];
+        if (i>0) {
+            queryCommand+=", ";
+        }
+        queryCommand+="@"+i;
+    }
+    queryCommand+=", @"+keys.Count+")";
+    values[keys.Count]="sjokolade";
+    db.Execute(queryCommand, values);
+
+}
+@* //JS-function for testing functionality of this file
+function post_to_url(path, params, method) {
+    method = method || "post"; // Set method to post by default, if not specified.
+
+    // The rest of this code assumes you are not using a library.
+    // It can be made less wordy if you use one.
+    var form = document.createElement("form");
+    form.setAttribute("method", method);
+    form.setAttribute("action", path);
+
+    for(var key in params) {
+        if(params.hasOwnProperty(key)) {
+            var hiddenField = document.createElement("input");
+            hiddenField.setAttribute("type", "hidden");
+            hiddenField.setAttribute("name", key);
+            hiddenField.setAttribute("value", params[key]);
+
+            form.appendChild(hiddenField);
+         }
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+post_to_url("", {action:"createProduct", name:"testis", epd:"6969"});
+*@

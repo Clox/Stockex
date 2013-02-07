@@ -1,0 +1,176 @@
+﻿@{
+	string activeCategory="sjokolade";
+
+	@*The following is a list of product-headers that are to be sent and that will be visible and editable in the html. Their order also determine the order in the html*@
+	List<ProductProperty> productProperties=new List<ProductProperty>{new ProductProperty("name", "Name", "string", true), new ProductProperty("ean", "EAN", "int"), new ProductProperty("epd", "EPD", "int", true), new ProductProperty("qntInUnit", "Quantity in Unit", "int"), new ProductProperty("unit", "Unit", "string"), new ProductProperty("producer", "Producer", "string")};
+	@*The following is a list of product-headers that are to be sent but which will be hidden in the html*@
+	//List<string> hiddenProductHeaders=new List<string>{"id"};
+	var db = Database.Open("products");
+	string queryCommand;
+
+	queryCommand="SELECT id";
+	for (int i=0; i<productProperties.Count; i++) {
+			queryCommand+=", ";
+		queryCommand+=productProperties[i].name;
+	}
+	
+	queryCommand+=" from products WHERE category = '"+activeCategory+"'";
+	//selectCommand="SELECT name, ean, epd, qntInUnit, unit, producer from products WHERE category = 'sjokolade'";
+	var selectedData = db.Query(queryCommand);
+	string jsProductsData="[";
+
+	@*http://blogs.microsoft.co.il/blogs/pini_dayan/archive/2009/03/12/convert-objects-to-json-in-c-using-javascriptserializer.aspx*@
+	System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+string sJSON = oSerializer.Serialize(productProperties);
+
+	int productNum=0;
+		foreach(var product in selectedData){
+			jsProductsData+="["+product["id"];
+			for (int i=0; i<productProperties.Count; i++) {
+				jsProductsData+=",";
+				jsProductsData+="'"+product[productProperties[i].name.ToString()]+"'";
+			}
+			jsProductsData+="],";
+			if (productNum<selectedData.Count()) {
+			productNum++;
+			}
+		}
+		jsProductsData+="]";
+}
+<!DOCTYPE html>
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Stockex</title>
+		<link rel="stylesheet" type="text/css" href="stockexStyle.css">
+	</head>
+	<body>
+			<div id="tableContainer">
+				<table id="mainTable">
+				</table>
+			</div>
+		<div id="addNewProduct"><a id="addNewProductLink" href="">Add<br/>new<br/>product</a></div>
+			<script src="jquery-1.9.0.min.js"></script>
+			<script src="jquery.validate.min.js"></script>
+			<script type="text/javascript">
+				var productProps=@Html.Raw(sJSON);
+				var productDataArray=@Html.Raw(jsProductsData);
+				var mainTableInnerHTML = "";
+				var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on blut in order to determine if change has been made before sending to server*@//col="+productProps[x].name
+				var numProducts=@productNum;
+				for (var x = 0; x<@productProperties.Count; x++ ) {
+					mainTableInnerHTML+="<tr>";
+					mainTableInnerHTML+="<td class='headerColumn'>"+productProps[x].displayName+"</td>";
+					for (var y = 0; y<numProducts; y++) {
+						mainTableInnerHTML+="<td contenteditable='true' class='editable' spellcheck='false' onblur='cellOnBlur(this)' onfocus='cellOnFocus(this)' productHeader='"+productProps[x].name+"' productId='"+productDataArray[y][0]+"'>"+productDataArray[y][x+1]+"</td>";
+					}
+					mainTableInnerHTML+="</tr>"
+				}
+				//productDataArray=null;
+				document.getElementById("mainTable").innerHTML = mainTableInnerHTML;
+				document.getElementById("addNewProductLink").onclick=addNewProduct;
+
+				function addNewProduct() {@*Function for "creating a new" empty product on client-side only before sending to server*@
+					$("#mainTable .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
+					for (var y=0; y<productProps.length; y++) {
+						var mainTable=document.getElementById("mainTable");
+						var newCell=mainTable.rows[y].insertCell(numProducts+1);
+						newCell.name=productProps[y].name;
+						newCell.contentEditable=true;
+						newCell.className="newProductInput editable";
+						newCell.spellcheck=false;
+						if (productProps[y].required)
+							newCell.className+=" required";
+						if (productProps[y].type=="int")
+							newCell.onkeypress=validate;
+						if (!y)
+						newCell.focus();
+					}
+					var buttonContainer;
+					document.getElementById("tableContainer").appendChild(buttonContainer=document.createElement("div"));
+					buttonContainer.id="newProductButtonContainer";
+
+					var okBtn;
+					buttonContainer.appendChild(okBtn=document.createElement("button"));
+					okBtn.innerHTML="OK";
+					okBtn.id="newProductOkBtn";
+					okBtn.onclick=createProduct;
+
+					var cancelBtn;
+					buttonContainer.appendChild(cancelBtn=document.createElement("button"));
+					cancelBtn.innerHTML="Cancel";
+					cancelBtn.id="newProductCancelBtn";
+					cancelBtn.onclick=cancelCreateProduct;
+
+					document.getElementById("addNewProductLink").style.visibility="hidden";
+             
+					return false;
+				}
+				function validate(evt) {@*http://stackoverflow.com/a/469419*@
+					var theEvent = evt || window.event;
+					var key = theEvent.keyCode || theEvent.which;
+					key = String.fromCharCode( key );
+					var regex = /[0-9]/;
+					if( !regex.test(key) ) {
+					theEvent.returnValue = false;
+					if(theEvent.preventDefault) theEvent.preventDefault();
+					}
+				}        
+             
+				function createProduct() {@*Function for sending new product data to server when OK is clicked*@
+					var requiredInputs=$("#mainTable .required");
+					for (var i=requiredInputs.length-1; i>=0; i--) {
+						if (!requiredInputs[i].textContent.length) {
+							alert("Please fill all required fields");
+							return;
+						}
+					}
+					$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
+					document.getElementById("addNewProductLink").style.visibility="visible";
+					$("#newProductButtonContainer").remove();
+                 
+					var inputFields=$("#mainTable .newProductInput");
+					var data="action=createProduct";
+					inputFields.each(function(key, value) {
+						data+="&"+value.name+"="+value.textContent;
+					});
+				alert (data);
+					$.ajax( {
+						type: 'POST',
+						url: 'commands.cshtml',
+						data: data, 
+						success: function(data) {
+							//alert(data);
+						}
+					});
+					inputFields.removeClass("newProductInput");
+					inputFields.attr("onblur", "cellOnBlur(this)");
+					inputFields.attr("onfocus", "cellOnFocus(this)");
+					numProducts++;
+				}
+				function cancelCreateProduct() {
+				$(document.body).focus();
+					$("#mainTable th:last-child, #mainTable td:last-child").remove();
+					document.getElementById("addNewProductLink").style.visibility="visible";
+					$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
+					$("#newProductButtonContainer").remove();
+				}
+				function cellOnFocus(target) {
+					cellOriginalValue=target.textContent;
+				}
+				function cellOnBlur(target) {
+					if (target.textContent!=cellOriginalValue) {
+				var data="action=updateCell&productId:"+target.productId+"&productHeader:"+target.productHeader+"&newValue:"+target.textContent;
+						$.ajax( {
+							type: 'POST',
+							url: 'commands.cshtml',
+							data: data, 
+							success: function(data) {
+							}
+						});
+					}
+				}
+			</script>
+	</body>
+</html>

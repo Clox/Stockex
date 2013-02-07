@@ -1,0 +1,38 @@
+body {
+    background-color: #a2aeb7;
+}
+table {
+    border-collapse: collapse;
+    background-color: white;
+}
+td {
+    min-width: 50px;
+    border: 1px solid #718ca0;
+}
+table,td {
+    border:  1px solid black;
+}
+.headerColumn {
+    padding-right: 5px;
+    text-align: right;
+}
+input[type=text] {
+    border-width: 0;
+    width: 100%;
+    height: 100%;
+}
+#tableContainer {
+	float: left;
+}
+#mainTable {
+    float: left;
+    margin-right: 10px;          
+}
+#addNewProduct {
+    margin-left: 15px;
+}
+#newProductButtonContainer {
+	float: right;
+    margin-right: -10px;
+	clear: left;
+}
