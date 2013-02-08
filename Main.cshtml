@@ -1,4 +1,5 @@
 ﻿@{
+	//http://psdreview.com/best-free-android-icon-sets-for-developers-and-designers/
 	string activeCategory="sjokolade";
 
 	@*The following is a list of product-headers that are to be sent and that will be visible and editable in the html. Their order also determine the order in the html*@
@@ -44,134 +45,134 @@ string sJSON = oSerializer.Serialize(productProperties);
 		<meta charset="utf-8" />
 		<title>Stockex</title>
 		<link rel="stylesheet" type="text/css" href="stockexStyle.css">
+		<script src="jquery-1.9.0.min.js"></script>
+		<script src="jquery.rotateTableCellContent.js"></script>
 	</head>
 	<body>
-			<div id="tableContainer">
-				<table id="mainTable">
-				</table>
-			</div>
-		<div id="addNewProduct"><a id="addNewProductLink" href="">Add<br/>new<br/>product</a></div>
-			<script src="jquery-1.9.0.min.js"></script>
-			<script src="jquery.validate.min.js"></script>
-			<script type="text/javascript">
-				var productProps=@Html.Raw(sJSON);
-				var productDataArray=@Html.Raw(jsProductsData);
-				var mainTableInnerHTML = "";
-				var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on blut in order to determine if change has been made before sending to server*@//col="+productProps[x].name
-				var numProducts=@productNum;
-				for (var x = 0; x<@productProperties.Count; x++ ) {
-					mainTableInnerHTML+="<tr>";
-					mainTableInnerHTML+="<td class='headerColumn'>"+productProps[x].displayName+"</td>";
-					for (var y = 0; y<numProducts; y++) {
-						mainTableInnerHTML+="<td contenteditable='true' class='editable' spellcheck='false' onblur='cellOnBlur(this)' onfocus='cellOnFocus(this)' productHeader='"+productProps[x].name+"' productId='"+productDataArray[y][0]+"'>"+productDataArray[y][x+1]+"</td>";
-					}
-					mainTableInnerHTML+="</tr>"
+		<div id="tableContainer">
+			<table id="mainTable">
+			</table>
+		</div>
+		<div id="addNewProduct"></div>
+		<script type="text/javascript">
+			var productProps=@Html.Raw(sJSON);
+			var productDataArray=@Html.Raw(jsProductsData);
+			var mainTableInnerHTML = "";
+			var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on cell-blur in order to determine if change has been made before sending to server*@//col="+productProps[x].name
+			var numProducts=@productNum;
+			for (var x = 0; x<@productProperties.Count; x++ ) {
+				mainTableInnerHTML+="<tr>";
+				mainTableInnerHTML+="<th class='headerColumn"+(!x?" topRow vertical":"")+"'>"+productProps[x].displayName+"</td>";
+				for (var y = 0; y<numProducts; y++) {
+					mainTableInnerHTML+="<td contenteditable='true' class='editable"+(!x?" topRow vertical":"")+((y%2)?" odd":"")+"' spellcheck='false' onblur='cellOnBlur(this)' onfocus='cellOnFocus(this)' productHeader='"+productProps[x].name+"' productId='"+productDataArray[y][0]+"'>"+productDataArray[y][x+1]+"</td>";
 				}
-				//productDataArray=null;
-				document.getElementById("mainTable").innerHTML = mainTableInnerHTML;
-				document.getElementById("addNewProductLink").onclick=addNewProduct;
+				mainTableInnerHTML+="</tr>"
+			}
+			//productDataArray=null;
+			document.getElementById("mainTable").innerHTML = mainTableInnerHTML;
+			document.getElementById("addNewProduct").onclick=addNewProduct;
 
-				function addNewProduct() {@*Function for "creating a new" empty product on client-side only before sending to server*@
-					$("#mainTable .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
-					for (var y=0; y<productProps.length; y++) {
-						var mainTable=document.getElementById("mainTable");
-						var newCell=mainTable.rows[y].insertCell(numProducts+1);
-						newCell.name=productProps[y].name;
-						newCell.contentEditable=true;
-						newCell.className="newProductInput editable";
-						newCell.spellcheck=false;
-						if (productProps[y].required)
-							newCell.className+=" required";
-						if (productProps[y].type=="int")
-							newCell.onkeypress=validate;
-						if (!y)
-						newCell.focus();
-					}
-					var buttonContainer;
-					document.getElementById("tableContainer").appendChild(buttonContainer=document.createElement("div"));
-					buttonContainer.id="newProductButtonContainer";
-
-					var okBtn;
-					buttonContainer.appendChild(okBtn=document.createElement("button"));
-					okBtn.innerHTML="OK";
-					okBtn.id="newProductOkBtn";
-					okBtn.onclick=createProduct;
-
-					var cancelBtn;
-					buttonContainer.appendChild(cancelBtn=document.createElement("button"));
-					cancelBtn.innerHTML="Cancel";
-					cancelBtn.id="newProductCancelBtn";
-					cancelBtn.onclick=cancelCreateProduct;
-
-					document.getElementById("addNewProductLink").style.visibility="hidden";
-             
-					return false;
+			function addNewProduct() {@*Function for "creating a new" empty product on client-side only before sending to server*@
+				$("#mainTable .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
+				for (var y=0; y<productProps.length; y++) {
+					var mainTable=document.getElementById("mainTable");
+					var newCell=mainTable.rows[y].insertCell(numProducts+1);
+					newCell.name=productProps[y].name;
+					newCell.contentEditable=true;
+					newCell.className="newProductInput editable";
+					newCell.spellcheck=false;
+					if (productProps[y].required)
+						newCell.className+=" required";
+					if (productProps[y].type=="int")
+						newCell.onkeypress=validate;
+					if (!y)
+					newCell.focus();
 				}
-				function validate(evt) {@*http://stackoverflow.com/a/469419*@
-					var theEvent = evt || window.event;
-					var key = theEvent.keyCode || theEvent.which;
-					key = String.fromCharCode( key );
-					var regex = /[0-9]/;
-					if( !regex.test(key) ) {
-					theEvent.returnValue = false;
-					if(theEvent.preventDefault) theEvent.preventDefault();
-					}
-				}        
+				var buttonContainer;
+				document.getElementById("tableContainer").appendChild(buttonContainer=document.createElement("div"));
+				buttonContainer.id="newProductButtonContainer";
+
+				var okBtn;
+				buttonContainer.appendChild(okBtn=document.createElement("button"));
+				okBtn.innerHTML="OK";
+				okBtn.id="newProductOkBtn";
+				okBtn.onclick=createProduct;
+
+				var cancelBtn;
+				buttonContainer.appendChild(cancelBtn=document.createElement("button"));
+				cancelBtn.innerHTML="Cancel";
+				cancelBtn.id="newProductCancelBtn";
+				cancelBtn.onclick=cancelCreateProduct;
+
+				document.getElementById("addNewProduct").style.visibility="hidden";
              
-				function createProduct() {@*Function for sending new product data to server when OK is clicked*@
-					var requiredInputs=$("#mainTable .required");
-					for (var i=requiredInputs.length-1; i>=0; i--) {
-						if (!requiredInputs[i].textContent.length) {
-							alert("Please fill all required fields");
-							return;
-						}
+				return false;
+			}
+			function validate(evt) {@*http://stackoverflow.com/a/469419*@
+				var theEvent = evt || window.event;
+				var key = theEvent.keyCode || theEvent.which;
+				key = String.fromCharCode( key );
+				var regex = /[0-9]/;
+				if( !regex.test(key) ) {
+				theEvent.returnValue = false;
+				if(theEvent.preventDefault) theEvent.preventDefault();
+				}
+			}        
+             
+			function createProduct() {@*Function for sending new product data to server when OK is clicked*@
+				var requiredInputs=$("#mainTable .required");
+				for (var i=requiredInputs.length-1; i>=0; i--) {
+					if (!requiredInputs[i].textContent.length) {
+						alert("Please fill all required fields");
+						return;
 					}
-					$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
-					document.getElementById("addNewProductLink").style.visibility="visible";
-					$("#newProductButtonContainer").remove();
+				}
+				$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
+				document.getElementById("addNewProduct").style.visibility="visible";
+				$("#newProductButtonContainer").remove();
                  
-					var inputFields=$("#mainTable .newProductInput");
-					var data="action=createProduct";
-					inputFields.each(function(key, value) {
-						if (value.textContent)
-							data+="&"+value.name+"="+value.textContent;
-					});
-				alert (data);
+				var inputFields=$("#mainTable .newProductInput");
+				var data="action=createProduct";
+				inputFields.each(function(key, value) {
+					if (value.textContent)
+						data+="&"+value.name+"="+value.textContent;
+				});
+			alert (data);
+				$.ajax( {
+					type: 'POST',
+					url: 'commands.cshtml',
+					data: data, 
+					success: function(data) {
+						//alert(data);
+					}
+				});
+				inputFields.removeClass("newProductInput");
+				inputFields.attr("onblur", "cellOnBlur(this)");
+				inputFields.attr("onfocus", "cellOnFocus(this)");
+				numProducts++;
+			}
+			function cancelCreateProduct() {
+			$(document.body).focus();
+				$("#mainTable th:last-child, #mainTable td:last-child").remove();
+				document.getElementById("addNewProduct").style.visibility="visible";
+				$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
+				$("#newProductButtonContainer").remove();
+			}
+			function cellOnFocus(target) {
+				cellOriginalValue=target.textContent;
+			}
+			function cellOnBlur(target) {@*When a cell loses focus and has been changed it should post a updateCell-command*@
+				if (target.textContent!=cellOriginalValue) {
+			var data="action=updateCell&productId="+target.getAttribute("productId")+"&productHeader="+target.getAttribute("productHeader")+"&newValue="+target.textContent;
 					$.ajax( {
 						type: 'POST',
 						url: 'commands.cshtml',
 						data: data, 
 						success: function(data) {
-							//alert(data);
 						}
 					});
-					inputFields.removeClass("newProductInput");
-					inputFields.attr("onblur", "cellOnBlur(this)");
-					inputFields.attr("onfocus", "cellOnFocus(this)");
-					numProducts++;
 				}
-				function cancelCreateProduct() {
-				$(document.body).focus();
-					$("#mainTable th:last-child, #mainTable td:last-child").remove();
-					document.getElementById("addNewProductLink").style.visibility="visible";
-					$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
-					$("#newProductButtonContainer").remove();
-				}
-				function cellOnFocus(target) {
-					cellOriginalValue=target.textContent;
-				}
-				function cellOnBlur(target) {@*When a cell loses focus and has been changed it should post a updateCell-command*@
-					if (target.textContent!=cellOriginalValue) {
-				var data="action=updateCell&productId="+target.getAttribute("productId")+"&productHeader="+target.getAttribute("productHeader")+"&newValue="+target.textContent;
-						$.ajax( {
-							type: 'POST',
-							url: 'commands.cshtml',
-							data: data, 
-							success: function(data) {
-							}
-						});
-					}
-				}
-			</script>
+			}
+		</script>
 	</body>
 </html>

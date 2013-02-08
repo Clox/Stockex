@@ -1,0 +1,101 @@
+/*
+@tc1:#030C22;
+@tc2:#20293F;//header-col bg
+@tc3:#989fa2;//odd col
+@tc4:#A9B0B3;//even row
+	*/
+@tc1:black;/*textcolor*/
+@tc2:white;/*header-col bg*/
+@tc3:white;/*odd col*/
+@tc4:white;/*even row*/
+@tc5:black;/*header-col text color*/
+body {
+    background-color: #5e6466;
+}
+
+.topRow{
+	border-top: 1px solid black;
+}
+.bottomRow{
+	border-bottom-color: black;
+}
+input[type=text] {
+    border-width: 0;
+    width: 100%;
+    height: 100%;
+}
+#mainTable {
+    float: left;
+    margin-right: 10px;
+	border-collapse: collapse;
+	background-color:   @tc4;   
+}
+#mainTable .odd {
+	background-color: @tc3;
+}
+#mainTable td {
+	border-style: solid;
+border-width: 1px;
+border-color: #cccccc;
+	color: @tc1;
+	padding-right: 3px;
+	padding-left: 3px;
+    min-width: 37px;
+}
+#mainTable th {
+background-color: @tc2;
+color: @tc5;
+padding-left: 5px;
+border-right: 1px solid #4f6b14;
+border-style: solid;
+border-width: 1px;
+border-color: #cccccc;
+border-right-color: black;
+text-align: right;
+padding-right: 5px;
+/*
+background-image: -ms-linear-gradient(left, #A0C23C 0%, #7E9933 15%, #7E9933 85%, #677D2B 100%);
+background-image: -moz-linear-gradient(left, #A0C23C 0%, #7E9933 15%, #7E9933 85%, #677D2B 100%);
+background-image: -o-linear-gradient(left, #A0C23C 0%, #7E9933 15%, #7E9933 85%, #677D2B 100%);
+background-image: -webkit-gradient(linear, left top, right top, color-stop(0, #A0C23C), color-stop(0.15, #7E9933), color-stop(0.85, #7E9933), color-stop(1, #677D2B));
+background-image: -webkit-linear-gradient(left, #A0C23C 0%, #7E9933 15%, #7E9933 85%, #677D2B 100%);
+*/
+	
+/* W3C Markup, IE10 Release Preview */ 
+background-image: linear-gradient(to right, #A0C23C 0%, #7E9933 15%, #7E9933 85%, #677D2B 100%);
+}
+#tableContainer {
+	float: left;
+}
+
+#newProductButtonContainer {
+	float: right;
+    margin-right: -10px;
+	clear: left;
+}
+#addNewProduct {
+	width: 32px;
+	height: 33px;
+	float: left;
+	background-image: url("Images/addButton.png");
+	cursor: pointer;
+}
+
+//Styles for rotateTableCellContent plugin start
+table div.rotated {
+  -webkit-transform: rotate(90deg);
+  -moz-transform: rotate(90deg);
+  writing-mode:tb-rl;
+  white-space: nowrap;
+}
+thead th {
+  vertical-align: top;
+}
+table .vertical {
+  white-space: nowrap;
+  text-align: center;
+}
+table .vertical div {
+	margin: auto;
+}
+//Styles for rotateTableCellContent plugin end
