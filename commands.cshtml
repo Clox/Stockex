@@ -29,6 +29,11 @@
 			var updateCommand = "UPDATE products SET "+Request.Form["productHeader"]+"=@0 WHERE id=@1";
 			db.Execute(updateCommand, Request.Form["newValue"], Request.Form["productId"]);
 		break;
+		case "test":
+			foreach (var key in Request.Form.Keys) {
+				@(key);
+			}
+		break;
 	}
 }
 @* //JS-function for testing functionality of this file

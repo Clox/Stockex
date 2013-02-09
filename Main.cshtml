@@ -47,6 +47,7 @@ string sJSON = oSerializer.Serialize(productProperties);
 		<link rel="stylesheet" type="text/css" href="stockexStyle.css">
 		<script src="jquery-1.9.0.min.js"></script>
 		<script src="jquery.rotateTableCellContent.js"></script>
+		<script src="json2.js"></script>
 	</head>
 	<body>
 		<div id="tableContainer">
@@ -60,16 +61,31 @@ string sJSON = oSerializer.Serialize(productProperties);
 			var mainTableInnerHTML = "";
 			var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on cell-blur in order to determine if change has been made before sending to server*@//col="+productProps[x].name
 			var numProducts=@productNum;
+			var internalProductId=0;@*When creating a new product the client first assigns it with an internal id which is then sent to server.
+			...The server then includes this id in the result so the client know which new item the response refers to. This is mainly in case of that the responses arrive in different order than the products ere created*@
+
+			var mainTable=document.getElementById("mainTable");
+			var tr, td, th;
 			for (var x = 0; x<@productProperties.Count; x++ ) {
-				mainTableInnerHTML+="<tr>";
-				mainTableInnerHTML+="<th class='headerColumn"+(!x?" topRow vertical":"")+"'>"+productProps[x].displayName+"</td>";
+				tr=document.createElement("tr");
+				tr.appendChild(th=document.createElement("th"));
+				$(th).text(productProps[x].displayName);
 				for (var y = 0; y<numProducts; y++) {
-					mainTableInnerHTML+="<td contenteditable='true' class='editable"+(!x?" topRow vertical":"")+((y%2)?" odd":"")+"' spellcheck='false' onblur='cellOnBlur(this)' onfocus='cellOnFocus(this)' productHeader='"+productProps[x].name+"' productId='"+productDataArray[y][0]+"'>"+productDataArray[y][x+1]+"</td>";
+					tr.appendChild(td=document.createElement("td"));
+					td.contentEditable=true;
+					td.className="editable";
+					if (!x)
+						td.className+=" vertical";
+					td.spellcheck=false;
+					$(td).on("blur", cellOnBlur)
+					.on("focus", cellOnFocus)
+					.data("productHeader", productProps[x].name)
+					.data("productId", productDataArray[y][0])
+					.text(productDataArray[y][x+1]);
 				}
-				mainTableInnerHTML+="</tr>"
+				mainTable.appendChild(tr);
 			}
 			//productDataArray=null;
-			document.getElementById("mainTable").innerHTML = mainTableInnerHTML;
 			document.getElementById("addNewProduct").onclick=addNewProduct;
 
 			function addNewProduct() {@*Function for "creating a new" empty product on client-side only before sending to server*@
@@ -131,13 +147,15 @@ string sJSON = oSerializer.Serialize(productProperties);
 				document.getElementById("addNewProduct").style.visibility="visible";
 				$("#newProductButtonContainer").remove();
                  
-				var inputFields=$("#mainTable .newProductInput");
 				var data="action=createProduct";
-				inputFields.each(function(key, value) {
+				$("#mainTable .newProductInput")
+				.each(function(key, value) {
 					if (value.textContent)
 						data+="&"+value.name+"="+value.textContent;
-				});
-			alert (data);
+				})
+				.removeClass("newProductInput")
+				.on("onblur", cellOnBlur)
+				.attr("onfocus", cellOnFocus);
 				$.ajax( {
 					type: 'POST',
 					url: 'commands.cshtml',
@@ -146,9 +164,6 @@ string sJSON = oSerializer.Serialize(productProperties);
 						//alert(data);
 					}
 				});
-				inputFields.removeClass("newProductInput");
-				inputFields.attr("onblur", "cellOnBlur(this)");
-				inputFields.attr("onfocus", "cellOnFocus(this)");
 				numProducts++;
 			}
 			function cancelCreateProduct() {
@@ -158,12 +173,12 @@ string sJSON = oSerializer.Serialize(productProperties);
 				$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
 				$("#newProductButtonContainer").remove();
 			}
-			function cellOnFocus(target) {
-				cellOriginalValue=target.textContent;
+			function cellOnFocus(event) {
+				cellOriginalValue=$(event.target).text();
 			}
-			function cellOnBlur(target) {@*When a cell loses focus and has been changed it should post a updateCell-command*@
-				if (target.textContent!=cellOriginalValue) {
-			var data="action=updateCell&productId="+target.getAttribute("productId")+"&productHeader="+target.getAttribute("productHeader")+"&newValue="+target.textContent;
+			function cellOnBlur(event) {@*When a cell loses focus and has been changed it should post an updateCell-command*@
+				if ($(event.target).text()!=cellOriginalValue) {
+			var data="action=updateCell&productId="+$(event.target).data("productId")+"&productHeader="+$(event.target).data("productHeader")+"&newValue="+$(event.target).text();
 					$.ajax( {
 						type: 'POST',
 						url: 'commands.cshtml',
