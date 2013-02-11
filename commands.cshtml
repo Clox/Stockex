@@ -1,28 +1,25 @@
-﻿@{//This file contains all the AJAX request-responses
-    List<string>keys=new List<string>();//Will hold keys from the request.Form. It's in form of List rather than array because it's length is yet unknown. First have to see how many form-values that are not to be passed to db-object that are present
-    object[] values;//Will hold values pointed to by keys ^
+﻿@using Newtonsoft.Json.Linq
+@{//This file contains all the responses and actions for AJAX-requests
     var db = Database.Open("products");
 	switch (Request.Form["action"]) {
 		case "createProduct":
-			foreach (string key in Request.Form.Keys) {
-				if (key!="action") {
-					if (Request.Form[key]!="") {
-						keys.Add(key);
-					}
-				}
-			}
-			string queryCommand = "INSERT INTO products ("+string.Join(", ", keys.ToArray())+", category) VALUES(";
-			values=new object[keys.Count+1];
-			for (var i=0; i<keys.Count; i++){
-				values[i]=Request.Form[keys[i]];
+			JObject props = JObject.Parse(Request.Form["data"]);
+			string keys="";
+			string[] values=new string[props.Count];
+			string placeHolders="";
+			var i=0;
+			foreach (var prop in props) {
+				values[i]=(string)prop.Value;
 				if (i>0) {
-					queryCommand+=", ";
+					keys+=",";
+					placeHolders+=",";
 				}
-				queryCommand+="@"+i;
+				keys+=prop.Key;
+				placeHolders+="@"+i;
+				i++;
 			}
-			queryCommand+=", @"+keys.Count+")";
-			values[keys.Count]="sjokolade";
-			db.Execute(queryCommand, values);
+			db.Execute("INSERT INTO products ("+keys+") VALUES("+placeHolders+")", values);
+			@Html.Raw("{\"id\":"+db.GetLastInsertId()+"}");
 		break;
 		case "updateCell":
 			//var updateCommand = "UPDATE products SET Title=@0, Genre=@1, Year=@2 WHERE Id=@3";

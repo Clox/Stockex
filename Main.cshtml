@@ -45,7 +45,7 @@ string sJSON = oSerializer.Serialize(productProperties);
 		<meta charset="utf-8" />
 		<title>Stockex</title>
 		<link rel="stylesheet" type="text/css" href="stockexStyle.css">
-		<script src="jquery-1.9.0.min.js"></script>
+		<script src="Scripts/jquery-1.9.1.min.js"></script>
 		<script src="jquery.rotateTableCellContent.js"></script>
 		<script src="json2.js"></script>
 	</head>
@@ -56,13 +56,17 @@ string sJSON = oSerializer.Serialize(productProperties);
 		</div>
 		<div id="addNewProduct"></div>
 		<script type="text/javascript">
+			
 			var productProps=@Html.Raw(sJSON);
 			var productDataArray=@Html.Raw(jsProductsData);
 			var mainTableInnerHTML = "";
 			var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on cell-blur in order to determine if change has been made before sending to server*@//col="+productProps[x].name
 			var numProducts=@productNum;
-			var internalProductId=0;@*When creating a new product the client first assigns it with an internal id which is then sent to server.
-			...The server then includes this id in the result so the client know which new item the response refers to. This is mainly in case of that the responses arrive in different order than the products ere created*@
+			var productClientId=0;@*When creating a new product, before product-id is available the client first assigns all cells with an internal id
+			During callback with context of the productsname-cell it is then easy to find the rest of the cells of the product with this*@
+			var category="sjokolade";
+			var pendingProductCreations={};@*Whenever a product-creation request is sent to server, the jqXHR object is stored in this variable, with the productClientId as key. When the request finishes the jqXHR object reference is immediately removed
+			If a cell-edit is commited to a project which creation is pending, the cell-edit-ajax-request is added as done() to the jqXHR so that it is sent once the product is present on server and the id is known*@
 
 			var mainTable=document.getElementById("mainTable");
 			var tr, td, th;
@@ -75,7 +79,8 @@ string sJSON = oSerializer.Serialize(productProperties);
 					td.contentEditable=true;
 					td.className="editable";
 					if (!x)
-						td.className+=" vertical";
+						td.className+=" vertical nameRow";@*second classname is used when finding the name-cell during product creation for setting as context in ajax-call*@
+					td.className+=" id"+productDataArray[y][0];@*Used to quickly select all the cells of a product*@
 					td.spellcheck=false;
 					$(td).on("blur", cellOnBlur)
 					.on("focus", cellOnFocus)
@@ -88,14 +93,15 @@ string sJSON = oSerializer.Serialize(productProperties);
 			//productDataArray=null;
 			document.getElementById("addNewProduct").onclick=addNewProduct;
 
-			function addNewProduct() {@*Function for "creating a new" empty product on client-side only before sending to server*@
+			function addNewProduct() {@*Function for "creating a new" empty product on client-side before sending to server*@
 				$("#mainTable .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
 				for (var y=0; y<productProps.length; y++) {
 					var mainTable=document.getElementById("mainTable");
 					var newCell=mainTable.rows[y].insertCell(numProducts+1);
-					newCell.name=productProps[y].name;
 					newCell.contentEditable=true;
-					newCell.className="newProductInput editable";
+					newCell.className="newProductInput editable cid"+productClientId;
+					if (!y)
+					newCell.className+=" nameRow";	
 					newCell.spellcheck=false;
 					if (productProps[y].required)
 						newCell.className+=" required";
@@ -103,6 +109,8 @@ string sJSON = oSerializer.Serialize(productProperties);
 						newCell.onkeypress=validate;
 					if (!y)
 					newCell.focus();
+					$(newCell).data("productHeader", productProps[y].name).data("productClientId",productClientId)
+					.on("blur", cellOnBlur);
 				}
 				var buttonContainer;
 				document.getElementById("tableContainer").appendChild(buttonContainer=document.createElement("div"));
@@ -146,25 +154,30 @@ string sJSON = oSerializer.Serialize(productProperties);
 				$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
 				document.getElementById("addNewProduct").style.visibility="visible";
 				$("#newProductButtonContainer").remove();
-                 
-				var data="action=createProduct";
+                
+
+				var data={category:category};
+				var newProductNameCell=$("#mainTable .newProductInput.nameRow");@*will be used as context in ajax call(need to store it before newProductInput-class is removed)*@
 				$("#mainTable .newProductInput")
 				.each(function(key, value) {
 					if (value.textContent)
-						data+="&"+value.name+"="+value.textContent;
+						data[$(value).data("productHeader")]=$(value).text();
 				})
 				.removeClass("newProductInput")
 				.on("onblur", cellOnBlur)
 				.attr("onfocus", cellOnFocus);
-				$.ajax( {
+				data={data:JSON.stringify(data), action:"createProduct"};
+				pendingProductCreations[numProducts]=//adds the jqXHR to the pendingProductCreations-object
+				$.ajax({
 					type: 'POST',
 					url: 'commands.cshtml',
-					data: data, 
-					success: function(data) {
-						//alert(data);
-					}
-				});
+					data: data,
+					context:newProductNameCell
+				})
+				.fail(productCreationFail)@*This handler is not called for cross-domain script and JSONP requests*@
+				.done(productCreationDone);
 				numProducts++;
+				productClientId++
 			}
 			function cancelCreateProduct() {
 			$(document.body).focus();
@@ -177,16 +190,46 @@ string sJSON = oSerializer.Serialize(productProperties);
 				cellOriginalValue=$(event.target).text();
 			}
 			function cellOnBlur(event) {@*When a cell loses focus and has been changed it should post an updateCell-command*@
-				if ($(event.target).text()!=cellOriginalValue) {
-			var data="action=updateCell&productId="+$(event.target).data("productId")+"&productHeader="+$(event.target).data("productHeader")+"&newValue="+$(event.target).text();
-					$.ajax( {
-						type: 'POST',
-						url: 'commands.cshtml',
-						data: data, 
-						success: function(data) {
-						}
-					});
+				if ($(event.target).data("productId")!=undefined) {//if productId of cell is present
+					sendCellChange(event.target)();
+				} else {//if productId is undefined. this happens if the product of an edited cell is newly created and there hasn't been a response of the product-creation from the server yet
+					//the ajax-request now needs to be queued so that it executes as soon as the server responds with the productId
+			pendingProductCreations[$(event.target).data("productClientId")].done(sendCellChange(event.target));
 				}
+			}
+			function sendCellChange(target) {
+				return function () {@*By having sendCellChange return an anonymous function it is possible to pass it as an event-handler while still passing an argument, because the anon-func will hav access to the arhument passed to sendCellChange*@
+					if ($(target).text()!=cellOriginalValue) {
+						var data="action=updateCell&productId="+$(target).data("productId")+"&productHeader="+$(target).data("productHeader")+"&newValue="+$(target).text();
+						$.ajax( {
+							type: 'POST',
+							url: 'commands.cshtml',
+							data: data, 
+						})
+						.done(cellEditDone)
+						.fail(cellEditFail);
+					}
+				}
+			}
+			function productCreationFail() {
+				
+			}
+			// let all cells of created products have a dynamic class like "productClientId_2", and pass productClientId to success-handler. but this could be "passed" by setting it to data() on context-object.
+			function productCreationDone(data) {//when a product has been created the id in the response should be grabbed and entered into the cells of that product
+				var productClientId=$(this).data("productClientId");
+				delete pendingProductCreations[productClientId];
+				data=$.parseJSON(data);
+				$("#mainTable .cid"+productClientId)//get all the cells of the product using by selecting their class using clientId
+				.removeClass("cid"+productClientId)//now remove clientId-selector-class, wont be needed anymore because we have real id now
+				.removeData("productClientId")//same with the clientId-data of course
+				.addClass("id"+data.id)//set the new selector-class using the returned id
+				.data("productId",data.id);//set productId of all the cells to the id that the server returned
+			}
+			function cellEditDone() {
+
+			}
+			function cellEditFail(one, two, three) {
+				alert ("fail celledit");
 			}
 		</script>
 	</body>
