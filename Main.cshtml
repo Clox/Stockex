@@ -3,7 +3,7 @@
 	string activeCategory="sjokolade";
 
 	@*The following is a list of product-headers that are to be sent and that will be visible and editable in the html. Their order also determine the order in the html*@
-	List<ProductProperty> productProperties=new List<ProductProperty>{new ProductProperty("name", "Name", "string", true), new ProductProperty("ean", "EAN", "int"), new ProductProperty("epd", "EPD", "int", true), new ProductProperty("qntInUnit", "Quantity in Unit", "int"), new ProductProperty("unit", "Unit", "string"), new ProductProperty("producer", "Producer", "string")};
+	List<ProductProperty> productProperties=new List<ProductProperty>{new ProductProperty("name", "Name", "string", true), new ProductProperty("ean", "EAN", "int"), new ProductProperty("epd", "EPD", "int", true), new ProductProperty("qntInUnit", "Quantity in Unit", "float"), new ProductProperty("unit", "Unit", "string"), new ProductProperty("producer", "Producer", "string")};
 	@*The following is a list of product-headers that are to be sent but which will be hidden in the html*@
 	//List<string> hiddenProductHeaders=new List<string>{"id"};
 	var db = Database.Open("products");
@@ -87,6 +87,19 @@ string sJSON = oSerializer.Serialize(productProperties);
 					.data("productHeader", productProps[x].name)
 					.data("productId", productDataArray[y][0])
 					.text(productDataArray[y][x+1]);
+					switch (productProps[x].type) {
+						case "int":
+							$(td).keypress(intValidateInput).on("paste", intValidatePaste);
+						break
+						case "string":
+							$(td).keypress(stringValidateInput).on("paste", stringValidatePaste);
+						break;
+						case "float":
+							$(td).keypress(floatValidateInput).on("paste", floatValidatePaste);
+						break;
+					}
+					if (productProps[x].required)
+						td.className+=" required";
 				}
 				mainTable.appendChild(tr);
 			}
@@ -95,8 +108,8 @@ string sJSON = oSerializer.Serialize(productProperties);
 
 			function addNewProduct() {@*Function for "creating a new" empty product on client-side before sending to server*@
 				$("#mainTable .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
+				var mainTable=document.getElementById("mainTable");
 				for (var y=0; y<productProps.length; y++) {
-					var mainTable=document.getElementById("mainTable");
 					var newCell=mainTable.rows[y].insertCell(numProducts+1);
 					newCell.contentEditable=true;
 					newCell.className="newProductInput editable cid"+productClientId;
@@ -105,12 +118,19 @@ string sJSON = oSerializer.Serialize(productProperties);
 					newCell.spellcheck=false;
 					if (productProps[y].required)
 						newCell.className+=" required";
-					if (productProps[y].type=="int")
-						newCell.onkeypress=validate;
+					switch (productProps[y].type) {
+						case "int":
+							$(newCell).keypress(intValidateInput).on("paste", intValidatePaste);
+						break;
+						case "string":
+							$(newCell).keypress(stringValidateInput).on("paste", stringValidatePaste);
+						break;
+						case "float":
+							$(newCell).keypress(floatValidateInput).on("paste", floatValidatePaste);
+					}
 					if (!y)
 					newCell.focus();
-					$(newCell).data("productHeader", productProps[y].name).data("productClientId",productClientId)
-					.on("blur", cellOnBlur);
+					$(newCell).data("productHeader", productProps[y].name).data("productClientId",productClientId);
 				}
 				var buttonContainer;
 				document.getElementById("tableContainer").appendChild(buttonContainer=document.createElement("div"));
@@ -132,16 +152,54 @@ string sJSON = oSerializer.Serialize(productProperties);
              
 				return false;
 			}
-			function validate(evt) {@*http://stackoverflow.com/a/469419*@
+			function intValidateInput(evt) {@*http://stackoverflow.com/a/469419*@
 				var theEvent = evt || window.event;
 				var key = theEvent.keyCode || theEvent.which;
 				key = String.fromCharCode( key );
-				var regex = /[0-9]/;
-				if( !regex.test(key) ) {
-				theEvent.returnValue = false;
-				if(theEvent.preventDefault) theEvent.preventDefault();
+				if(/[^0-9]/.test(key) ) {
+					theEvent.returnValue = false;
+					if(theEvent.preventDefault) theEvent.preventDefault();
 				}
-			}        
+			}
+			function intValidatePaste(evt) {
+				setTimeout(function(){//Have wrap the code in a timeout (null/0 ms seems to be fine) or else the text from the clipboard wont be present in the textfield yet 
+					$(evt.target).text($(evt.target).text().replace(/[^0-9]/g,""))
+				});
+			}
+			function stringValidateInput(evt) {
+				var theEvent = evt || window.event;
+				var key = theEvent.keyCode || theEvent.which;
+				//key = String.fromCharCode( key );
+				if(key==9||key==13) {
+					theEvent.returnValue = false;
+					if(theEvent.preventDefault) theEvent.preventDefault();
+				}
+			}
+			function stringValidatePaste(evt) {
+				setTimeout(function(){
+					$(evt.target).text($(evt.target).text().replace(/[\n\t]/g,""));
+				});
+			}
+			function floatValidateInput(evt) {
+				var theEvent = evt || window.event;
+				var key = theEvent.keyCode || theEvent.which;
+				key = String.fromCharCode( key );
+				if(/[^0-9.]/g.test(key)||(key=="."&&/\./.test($(evt.target).text()))) {
+					theEvent.returnValue = false;
+					if(theEvent.preventDefault) theEvent.preventDefault();
+					return false;
+				}
+				//floatValidatePaste(evt);
+			}
+			function floatValidatePaste(evt) {
+				setTimeout(function(){
+					var result=$(evt.target).text().match(/\d+\.?\d*/);
+					if (result)
+						$(evt.target).text(result)[0];
+					else 
+						$(evt.target).text("");
+				});
+			}
              
 			function createProduct() {@*Function for sending new product data to server when OK is clicked*@
 				var requiredInputs=$("#mainTable .required");
@@ -164,7 +222,7 @@ string sJSON = oSerializer.Serialize(productProperties);
 						data[$(value).data("productHeader")]=$(value).text();
 				})
 				.removeClass("newProductInput")
-				.on("onblur", cellOnBlur)
+				.on("blur", cellOnBlur)
 				.attr("onfocus", cellOnFocus);
 				data={data:JSON.stringify(data), action:"createProduct"};
 				pendingProductCreations[numProducts]=//adds the jqXHR to the pendingProductCreations-object
@@ -190,25 +248,30 @@ string sJSON = oSerializer.Serialize(productProperties);
 				cellOriginalValue=$(event.target).text();
 			}
 			function cellOnBlur(event) {@*When a cell loses focus and has been changed it should post an updateCell-command*@
-				if ($(event.target).data("productId")!=undefined) {//if productId of cell is present
-					sendCellChange(event.target)();
-				} else {//if productId is undefined. this happens if the product of an edited cell is newly created and there hasn't been a response of the product-creation from the server yet
-					//the ajax-request now needs to be queued so that it executes as soon as the server responds with the productId
-			pendingProductCreations[$(event.target).data("productClientId")].done(sendCellChange(event.target));
+				if ($(event.target).text()!=cellOriginalValue) {
+					if (!$(event.target).text().length)
+						if ($(event.target).hasClass("required")) {
+							$(event.target).text(cellOriginalValue);
+							return;
+						}
+					if ($(event.target).data("productId")!=undefined) {//if productId of cell is present
+						sendCellChange(event.target)();
+					} else {//if productId is undefined. this happens if the product of an edited cell is newly created and there hasn't been a response of the product-creation from the server yet
+						//the ajax-request now needs to be queued so that it executes as soon as the server responds with the productId
+						pendingProductCreations[$(event.target).data("productClientId")].done(sendCellChange(event.target));
+					}
 				}
 			}
 			function sendCellChange(target) {
 				return function () {@*By having sendCellChange return an anonymous function it is possible to pass it as an event-handler while still passing an argument, because the anon-func will hav access to the arhument passed to sendCellChange*@
-					if ($(target).text()!=cellOriginalValue) {
-						var data="action=updateCell&productId="+$(target).data("productId")+"&productHeader="+$(target).data("productHeader")+"&newValue="+$(target).text();
-						$.ajax( {
-							type: 'POST',
-							url: 'commands.cshtml',
-							data: data, 
-						})
-						.done(cellEditDone)
-						.fail(cellEditFail);
-					}
+					var data="action=updateCell&productId="+$(target).data("productId")+"&productHeader="+$(target).data("productHeader")+"&newValue="+$(target).text();
+					$.ajax( {
+						type: 'POST',
+						url: 'commands.cshtml',
+						data: data, 
+					})
+					.done(cellEditDone)
+					.fail(cellEditFail);
 				}
 			}
 			function productCreationFail() {
@@ -229,8 +292,8 @@ string sJSON = oSerializer.Serialize(productProperties);
 
 			}
 			function cellEditFail(one, two, three) {
-				alert ("fail celledit");
 			}
+
 		</script>
 	</body>
 </html>
