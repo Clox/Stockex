@@ -45,13 +45,14 @@ string sJSON = oSerializer.Serialize(productProperties);
 		<meta charset="utf-8" />
 		<title>Stockex</title>
 		<link rel="stylesheet" type="text/css" href="stockexStyle.css">
-		<script src="Scripts/jquery-1.9.1.min.js"></script>
+		<script src="Scripts/jquery-1.9.1.min.js" charset="UTF-8"></script>
 		<script src="jquery.rotateTableCellContent.js"></script>
 		<script src="json2.js"></script>
 	</head>
 	<body>
 		<div id="tableContainer">
 			<table id="mainTable">
+				<tbody id="mainTableBody"></tbody>
 			</table>
 		</div>
 		<div id="addNewProduct"></div>
@@ -59,7 +60,7 @@ string sJSON = oSerializer.Serialize(productProperties);
 			
 			var productProps=@Html.Raw(sJSON);
 			var productDataArray=@Html.Raw(jsProductsData);
-			var mainTableInnerHTML = "";
+			var mainTableBodyInnerHTML = "";
 			var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on cell-blur in order to determine if change has been made before sending to server*@//col="+productProps[x].name
 			var numProducts=@productNum;
 			var productClientId=0;@*When creating a new product, before product-id is available the client first assigns all cells with an internal id
@@ -68,49 +69,50 @@ string sJSON = oSerializer.Serialize(productProperties);
 			var pendingProductCreations={};@*Whenever a product-creation request is sent to server, the jqXHR object is stored in this variable, with the productClientId as key. When the request finishes the jqXHR object reference is immediately removed
 			If a cell-edit is commited to a project which creation is pending, the cell-edit-ajax-request is added as done() to the jqXHR so that it is sent once the product is present on server and the id is known*@
 
-			var mainTable=document.getElementById("mainTable");
-			var tr, td, th;
+			var mainTableBody=document.getElementById("mainTableBody");
+			var tr, td, th, cell, cellValue;
 			for (var x = 0; x<@productProperties.Count; x++ ) {
 				tr=document.createElement("tr");
 				tr.appendChild(th=document.createElement("th"));
 				$(th).text(productProps[x].displayName);
 				for (var y = 0; y<numProducts; y++) {
 					tr.appendChild(td=document.createElement("td"));
-					td.contentEditable=true;
-					td.className="editable";
+					td.appendChild(cell=document.createElement("div"));
+					cell.contentEditable=true;
+					cell.className="editable";
 					if (!x)
-						td.className+=" vertical nameRow";@*second classname is used when finding the name-cell during product creation for setting as context in ajax-call*@
-					td.className+=" id"+productDataArray[y][0];@*Used to quickly select all the cells of a product*@
-					td.spellcheck=false;
-					$(td).on("blur", cellOnBlur)
+						cell.className+=" vertical nameRow";@*second classname is used when finding the name-cell during product creation for setting as context in ajax-call*@
+					cell.className+=" id"+productDataArray[y][0];@*Used to quickly select all the cells of a product*@
+					cell.spellcheck=false;
+					$(cell).on("blur", cellOnBlur)
 					.on("focus", cellOnFocus)
 					.data("productHeader", productProps[x].name)
 					.data("productId", productDataArray[y][0])
 					.text(productDataArray[y][x+1]);
 					switch (productProps[x].type) {
 						case "int":
-							$(td).keypress(intValidateInput).on("paste", intValidatePaste);
+							$(cell).keypress(intValidateInput).on("paste", intValidatePaste);
 						break
 						case "string":
-							$(td).keypress(stringValidateInput).on("paste", stringValidatePaste);
+							$(cell).keypress(stringValidateInput).on("paste", stringValidatePaste);
 						break;
 						case "float":
-							$(td).keypress(floatValidateInput).on("paste", floatValidatePaste);
+							$(cell).keypress(floatValidateInput).on("paste", floatValidatePaste);
 						break;
 					}
 					if (productProps[x].required)
-						td.className+=" required";
+						cell.className+=" required";
 				}
-				mainTable.appendChild(tr);
+				mainTableBody.appendChild(tr);
 			}
 			//productDataArray=null;
 			document.getElementById("addNewProduct").onclick=addNewProduct;
 
 			function addNewProduct() {@*Function for "creating a new" empty product on client-side before sending to server*@
-				$("#mainTable .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
-				var mainTable=document.getElementById("mainTable");
+				$("#mainTableBody .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
+				var mainTableBody=document.getElementById("mainTableBody");
 				for (var y=0; y<productProps.length; y++) {
-					var newCell=mainTable.rows[y].insertCell(numProducts+1);
+					var newCell=mainTableBody.rows[y].insertCell(numProducts+1).appendChild(document.createElement("div"));
 					newCell.contentEditable=true;
 					newCell.className="newProductInput editable cid"+productClientId;
 					if (!y)
@@ -131,6 +133,7 @@ string sJSON = oSerializer.Serialize(productProperties);
 					if (!y)
 					newCell.focus();
 					$(newCell).data("productHeader", productProps[y].name).data("productClientId",productClientId);
+					
 				}
 				var buttonContainer;
 				document.getElementById("tableContainer").appendChild(buttonContainer=document.createElement("div"));
@@ -202,21 +205,21 @@ string sJSON = oSerializer.Serialize(productProperties);
 			}
              
 			function createProduct() {@*Function for sending new product data to server when OK is clicked*@
-				var requiredInputs=$("#mainTable .required");
+				var requiredInputs=$("#mainTableBody .required");
 				for (var i=requiredInputs.length-1; i>=0; i--) {
 					if (!requiredInputs[i].textContent.length) {
 						alert("Please fill all required fields");
 						return;
 					}
 				}
-				$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
+				$("#mainTableBody .editable").attr("contenteditable", true);@*Make all cells editable again*@
 				document.getElementById("addNewProduct").style.visibility="visible";
 				$("#newProductButtonContainer").remove();
                 
 
 				var data={category:category};
-				var newProductNameCell=$("#mainTable .newProductInput.nameRow");@*will be used as context in ajax call(need to store it before newProductInput-class is removed)*@
-				$("#mainTable .newProductInput")
+				var newProductNameCell=$("#mainTableBody .newProductInput.nameRow");@*will be used as context in ajax call(need to store it before newProductInput-class is removed)*@
+				$("#mainTableBody .newProductInput")
 				.each(function(key, value) {
 					if (value.textContent)
 						data[$(value).data("productHeader")]=$(value).text();
@@ -239,9 +242,9 @@ string sJSON = oSerializer.Serialize(productProperties);
 			}
 			function cancelCreateProduct() {
 			$(document.body).focus();
-				$("#mainTable th:last-child, #mainTable td:last-child").remove();
+				$("#mainTableBody th:last-child, #mainTableBody td:last-child").remove();
 				document.getElementById("addNewProduct").style.visibility="visible";
-				$("#mainTable .editable").attr("contenteditable", true);@*Make all cells editable again*@
+				$("#mainTableBody .editable").attr("contenteditable", true);@*Make all cells editable again*@
 				$("#newProductButtonContainer").remove();
 			}
 			function cellOnFocus(event) {
@@ -268,7 +271,7 @@ string sJSON = oSerializer.Serialize(productProperties);
 					$.ajax( {
 						type: 'POST',
 						url: 'commands.cshtml',
-						data: data, 
+						data: data
 					})
 					.done(cellEditDone)
 					.fail(cellEditFail);
@@ -282,7 +285,7 @@ string sJSON = oSerializer.Serialize(productProperties);
 				var productClientId=$(this).data("productClientId");
 				delete pendingProductCreations[productClientId];
 				data=$.parseJSON(data);
-				$("#mainTable .cid"+productClientId)//get all the cells of the product using by selecting their class using clientId
+				$("#mainTableBody .cid"+productClientId)//get all the cells of the product using by selecting their class using clientId
 				.removeClass("cid"+productClientId)//now remove clientId-selector-class, wont be needed anymore because we have real id now
 				.removeData("productClientId")//same with the clientId-data of course
 				.addClass("id"+data.id)//set the new selector-class using the returned id
