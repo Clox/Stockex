@@ -3,6 +3,7 @@
 @tc3:white;/*odd col*/
 @tc4:white;/*even row*/
 @tc5:black;/*header-col text color*/
+@columnWidth:38px;
 body {
     background-color: #5e6466;
 }
@@ -12,11 +13,6 @@ body {
 }
 .bottomRow{
 	border-bottom-color: black;
-}
-input[type=text] {
-    border-width: 0;
-    width: 100%;
-    height: 100%;
 }
 #mainTable {
     float: left;
@@ -34,11 +30,10 @@ input[type=text] {
 	color: @tc1;
 }
 #mainTable td>div {
-	width: 38px;
+	width: @columnWidth;
 	//overflow: hidden;
 }
 #mainTable .editable {
-
 }
 div {
 display: block;
@@ -56,7 +51,6 @@ display: block;
 #tableContainer {
 	float: left;
 }
-
 #newProductButtonContainer {
 	float: right;
     margin-right: -10px;
@@ -69,14 +63,6 @@ display: block;
 	background-image: url("Images/addButton.png");
 	cursor: pointer;
 }
-
-//Styles for rotateTableCellContent plugin start
-table div.rotated {
-  -webkit-transform: rotate(90deg);
-  -moz-transform: rotate(90deg);
-  writing-mode:tb-rl;
-  white-space: nowrap;
-}
 thead th {
   vertical-align: top;
 }
@@ -84,19 +70,16 @@ table .vertical {
 	overflow: hidden;
 	text-align: left;
 	margin-top: 4px;
-	width: 100%;
-	height: 100%;
+	width: 100%;height: 100%;/*Needed for IE*/
 	-webkit-transform: rotate(90deg);
 	-moz-transform: rotate(90deg);
-
 	-webkit-transform-origin: 0% 0%;
 	-moz-transform-origin: 0% 0%;
-
-	
 	writing-mode:tb-rl;
 }
-.rotatedCell {/*This class is only applied to the rotated cells if browser !=ie*/
-	margin-left: 38px;
+.rotatedCell {/*This class is only applied to the rotated cells in browser that support transform*/
+	margin-left: @columnWidth;
+	cursor: vertical-text;
 }
 
 *:focus {

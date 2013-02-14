@@ -91,7 +91,6 @@
 					td.appendChild(cell=document.createElement("div"));
 					cell.style.height=userData[x].h+"px";
 					if (product.vertical) {
-						cell.style.width="38px";
 						cell.style.height=userData[x].h+"px";
 						cell.appendChild(cell=document.createElement("div"));
 						cell.className+=" vertical";
@@ -326,7 +325,7 @@
 		</script>
 	</body>
 </html>
-@*//if needed to create cssRule
+@*//if needed to create cssRule//http://www.rainbodesign.com/pub/css/css-javascript.html
 			var sheet=document.styleSheets[0];
 var rules=sheet["rules"]||sheet["cssRules"]
 sheet.insertRule(".vertical{margin-left:38px}", 0);
