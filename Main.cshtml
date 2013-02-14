@@ -61,7 +61,7 @@
 		<div id="addNewProduct"></div>
 		<script type="text/javascript">
 			var productHeaders=@Html.Raw(sJSON);
-			var productDataArray=@Html.Raw(jsProductsData);
+			var productDataArray=@Html.Raw(jsProductsData);@*//this one will not have the right arrangment(y switched with x) so have to transpose when using*@
 			var mainTableBodyInnerHTML = "";
 			var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on cell-blur in order to determine if change has been made before sending to server*@
 			var numProducts=@productNum;
@@ -81,55 +81,59 @@
 			div.parentNode.removeChild(div);
 			div = null;
 			@*determine if rotation is supported - end*@
-			for (var x = 0; x<@productHeaders.Count; x++ ) {
+			for (var y = 0; y<@productHeaders.Count; y++ ) {
 				tr=document.createElement("tr");
 				tr.appendChild(th=document.createElement("th"));
-				var productHeader=productHeaders[userData[x].n];
+				var productHeader=productHeaders[userData[y].n];
 				$(th).text(productHeader.displayName);
-				for (var y = 0; y<numProducts; y++) {
-					tr.appendChild(td=document.createElement("td"));
-					td.appendChild(cell=document.createElement("div"));
-					cell.style.height=userData[x].h+"px";
-					if (productHeader.vertical) {
-						cell.style.height=userData[x].h+"px";
-						cell.appendChild(cell=document.createElement("div"));
-						cell.className+=" vertical";
-
-					}
-					cell.contentEditable=true;
-					cell.className+=" editable";
-					if (!x)
-						cell.className+=" nameRow";@*used when finding the name-cell during product creation for setting as context in ajax-call*@
-					cell.className+=" id"+productDataArray[y][0];@*Used to quickly select all the cells of a product*@
-					cell.spellcheck=false;
-					$(cell).on("blur", cellOnBlur)
-					.on("focus", cellOnFocus)
-					.data("productHeader", userData[x].n)
-					.data("productId", productDataArray[y][0])
-					.text(productDataArray[y][x+1]);
-					switch (productHeader.type) {
-						case "int":
-							$(cell).keypress(intValidateInput).on("paste", intValidatePaste);
-						break
-						case "string":
-							$(cell).keypress(stringValidateInput).on("paste", stringValidatePaste);
-						break;
-						case "float":
-							$(cell).keypress(floatValidateInput).on("paste", floatValidatePaste);
-						break;
-					}
-					if (productHeader.required)
-						cell.className+=" required";
-					if (productHeader.vertical)
-						if (cssTransitionsSupported) {
-							cell.style.height="38px";//size needed for overflow:hidden to work
-							cell.style.width=userData[x].h+"px";
-							cell.className+=" rotatedCell";
-						}
+				for (var x = 0; x<numProducts; x++) {
+					mainTableBody.appendChild(tr);
+					$(createCell(x,y))
+					.data("productId", productDataArray[x][0])
+					.text(productDataArray[x][y+1]);//switching x and y in order to transpose
 				}
-				mainTableBody.appendChild(tr);
 			}
-
+			function createCell(x,y) {@*//creates a header-specific but not product-specific cell*@
+				var tr=document.getElementById("mainTableBody").children[y];
+				var td,cell;
+				tr.appendChild(td=document.createElement("td"));
+				td.appendChild(cell=document.createElement("div"));
+				cell.style.height=userData[y].h+"px";
+				if (productHeader.vertical) {
+					cell.style.height=userData[y].h+"px";
+					cell.appendChild(cell=document.createElement("div"));
+					cell.className+=" vertical";
+				}
+				cell.contentEditable=true;
+				cell.className+=" editable";
+				if (!y)
+					cell.className+=" nameRow";@*used when finding the name-cell during product creation for setting as context in ajax-call*@
+				cell.className+=" id"+productDataArray[x][0];@*Used to quickly select all the cells of a product*@
+				cell.spellcheck=false;
+				$(cell).on("blur", cellOnBlur)
+				.on("focus", cellOnFocus)
+				.data("productHeader", userData[y].n);
+				switch (productHeader.type) {
+					case "int":
+						$(cell).keypress(intValidateInput).on("paste", intValidatePaste);
+					break
+					case "string":
+						$(cell).keypress(stringValidateInput).on("paste", stringValidatePaste);
+					break;
+					case "float":
+						$(cell).keypress(floatValidateInput).on("paste", floatValidatePaste);
+					break;
+				}
+				if (productHeader.required)
+					cell.className+=" required";
+				if (productHeader.vertical)
+					if (cssTransitionsSupported) {
+						cell.style.height="38px";//size needed for overflow:hidden to work
+						cell.style.width=userData[y].h+"px";
+						cell.className+=" rotatedCell";
+					}
+				return cell;
+			}
 			//productDataArray=null;
 			document.getElementById("addNewProduct").onclick=addNewProduct;
 
