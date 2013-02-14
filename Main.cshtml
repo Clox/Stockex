@@ -3,18 +3,18 @@
 	string activeCategory="sjokolade";
 
 	@*The following is a list of product-headers that are to be sent and that will be visible and editable in the html. Their order also determine the order in the html*@
-	Dictionary<string, ProductProperty> productProperties =new Dictionary<string, ProductProperty>();
-	productProperties.Add("name",new ProductProperty("Name","string",true, true));
-	productProperties.Add("epd",new ProductProperty("EPD","int", false, true));
-	productProperties.Add("ean",new ProductProperty("EAN","string", false, true));
-	productProperties.Add("qntInUnit",new ProductProperty("Quantity in unit","float"));
-	productProperties.Add("unit",new ProductProperty("Unit","string"));
-	productProperties.Add("producer",new ProductProperty("Producer","string", false, true));
+	Dictionary<string, ProductProperty> productHeaders =new Dictionary<string, ProductProperty>();
+	productHeaders.Add("name",new ProductProperty("Name","string",true, true));
+	productHeaders.Add("epd",new ProductProperty("EPD","int", false, true));
+	productHeaders.Add("ean",new ProductProperty("EAN","string", false, true));
+	productHeaders.Add("qntInUnit",new ProductProperty("Quantity in unit","float"));
+	productHeaders.Add("unit",new ProductProperty("Unit","string"));
+	productHeaders.Add("producer",new ProductProperty("Producer","string", false, true));
 
 	var db = Database.Open("products");
 	string queryCommand;
 
-	queryCommand="SELECT id,"+String.Join(",",productProperties.Keys.ToArray())+" from products WHERE category = 'sjokolade'";
+	queryCommand="SELECT id,"+String.Join(",",productHeaders.Keys)+" from products WHERE category = 'sjokolade'";
 
 	//selectCommand="SELECT name, ean, epd, qntInUnit, unit, producer from products WHERE category = 'sjokolade'";
 	var selectedData = db.Query(queryCommand);
@@ -22,12 +22,12 @@
 
 	@*http://blogs.microsoft.co.il/blogs/pini_dayan/archive/2009/03/12/convert-objects-to-json-in-c-using-javascriptserializer.aspx*@
 	System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-	string sJSON = oSerializer.Serialize(productProperties);
+	string sJSON = oSerializer.Serialize(productHeaders);
 
 	int productNum=0;
 		foreach(var product in selectedData){
 			jsProductsData+="["+product["id"];
-			foreach (string key in productProperties.Keys) {
+			foreach (string key in productHeaders.Keys) {
 				jsProductsData+=",";
 				jsProductsData+="'"+product[key]+"'";
 			}
@@ -38,7 +38,7 @@
 		}
 		jsProductsData+="]";
 
-		var userData=db.QueryValue("SELECT productProperties FROM userData WHERE userName ='oggan'");
+		var userData=db.QueryValue("SELECT productHeaders FROM userData WHERE userName ='oggan'");
 }
 <!DOCTYPE html>
 
@@ -60,10 +60,10 @@
 		</div>
 		<div id="addNewProduct"></div>
 		<script type="text/javascript">
-			var productProps=@Html.Raw(sJSON);
+			var productHeaders=@Html.Raw(sJSON);
 			var productDataArray=@Html.Raw(jsProductsData);
 			var mainTableBodyInnerHTML = "";
-			var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on cell-blur in order to determine if change has been made before sending to server*@//col="+productProps[x].name
+			var cellOriginalValue;@*Holds the initial value of cell which the "new" value is compared with on cell-blur in order to determine if change has been made before sending to server*@
 			var numProducts=@productNum;
 			var productClientId=0;@*When creating a new product, before product-id is available the client first assigns all cells with an internal id
 			During callback with context of the productsname-cell it is then easy to find the rest of the cells of the product with this*@
@@ -81,16 +81,16 @@
 			div.parentNode.removeChild(div);
 			div = null;
 			@*determine if rotation is supported - end*@
-			for (var x = 0; x<@productProperties.Count; x++ ) {
+			for (var x = 0; x<@productHeaders.Count; x++ ) {
 				tr=document.createElement("tr");
 				tr.appendChild(th=document.createElement("th"));
-				var product=productProps[userData[x].n];
-				$(th).text(product.displayName);
+				var productHeader=productHeaders[userData[x].n];
+				$(th).text(productHeader.displayName);
 				for (var y = 0; y<numProducts; y++) {
 					tr.appendChild(td=document.createElement("td"));
 					td.appendChild(cell=document.createElement("div"));
 					cell.style.height=userData[x].h+"px";
-					if (product.vertical) {
+					if (productHeader.vertical) {
 						cell.style.height=userData[x].h+"px";
 						cell.appendChild(cell=document.createElement("div"));
 						cell.className+=" vertical";
@@ -107,7 +107,7 @@
 					.data("productHeader", userData[x].n)
 					.data("productId", productDataArray[y][0])
 					.text(productDataArray[y][x+1]);
-					switch (product.type) {
+					switch (productHeader.type) {
 						case "int":
 							$(cell).keypress(intValidateInput).on("paste", intValidatePaste);
 						break
@@ -118,9 +118,9 @@
 							$(cell).keypress(floatValidateInput).on("paste", floatValidatePaste);
 						break;
 					}
-					if (product.required)
+					if (productHeader.required)
 						cell.className+=" required";
-					if (product.vertical)
+					if (productHeader.vertical)
 						if (cssTransitionsSupported) {
 							cell.style.height="38px";//size needed for overflow:hidden to work
 							cell.style.width=userData[x].h+"px";
@@ -136,16 +136,18 @@
 			function addNewProduct() {@*Function for "creating a new" empty product on client-side before sending to server*@
 				$("#mainTableBody .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
 				var mainTableBody=document.getElementById("mainTableBody");
-				for (var y=0; y<productProps.length; y++) {
+				for (var y=0; y<userData.length; y++) {
+					var productHeader=productHeaders[userData[y].n];
 					var newCell=mainTableBody.rows[y].insertCell(numProducts+1).appendChild(document.createElement("div"));
 					newCell.contentEditable=true;
 					newCell.className="newProductInput editable cid"+productClientId;
 					if (!y)
 					newCell.className+=" nameRow";	
 					newCell.spellcheck=false;
-					if (productProps[y].required)
+			//test
+					if (productHeader.required)
 						newCell.className+=" required";
-					switch (productProps[y].type) {
+					switch (productHeader.type) {
 						case "int":
 							$(newCell).keypress(intValidateInput).on("paste", intValidatePaste);
 						break;
@@ -157,7 +159,7 @@
 					}
 					if (!y)
 					newCell.focus();
-					$(newCell).data("productHeader", productProps[y].name).data("productClientId",productClientId);
+					$(newCell).data("productHeader", productHeader.name).data("productClientId",productClientId);
 					
 				}
 				var buttonContainer;
