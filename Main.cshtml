@@ -88,6 +88,8 @@
 				for (var x = 0; x<numProducts; x++) {
 					mainTableBody.appendChild(tr);
 					$(createCell(x,y))
+					.on("blur", cellOnBlur)
+					.on("focus", cellOnFocus)
 					.data("productId", productDataArray[x][0])
 					.text(productDataArray[x][y+1])//switching x and y in order to transpose
 					.get().className+=" id"+productDataArray[x][0];@*Used to quickly select all the cells of a product*@
@@ -106,9 +108,7 @@
 				if (!y)
 					cell.className+=" nameRow";@*used when finding the name-cell during product creation for setting as context in ajax-call*@
 				cell.spellcheck=false;
-				$(cell).on("blur", cellOnBlur)
-				.on("focus", cellOnFocus)
-				.data("productHeader", userData[y].n);
+				$(cell).data("productHeader", userData[y].n);
 				switch (productHeader.type) {
 					case "int":
 						$(cell).keypress(intValidateInput).on("paste", intValidatePaste);
