@@ -84,8 +84,7 @@
 			for (var y = 0; y<@productHeaders.Count; y++ ) {
 				tr=document.createElement("tr");
 				tr.appendChild(th=document.createElement("th"));
-				var productHeader=productHeaders[userData[y].n];
-				$(th).text(productHeader.displayName);
+				$(th).text(productHeaders[userData[y].n].displayName);
 				for (var x = 0; x<numProducts; x++) {
 					mainTableBody.appendChild(tr);
 					$(createCell(x,y))
@@ -94,10 +93,8 @@
 				}
 			}
 			function createCell(x,y) {@*//creates a header-specific but not product-specific cell*@
-				var tr=document.getElementById("mainTableBody").children[y];
-				var td,cell;
-				tr.appendChild(td=document.createElement("td"));
-				td.appendChild(cell=document.createElement("div"));
+				var productHeader=productHeaders[userData[y].n];
+				var cell=document.getElementById("mainTableBody").children[y].insertCell(x+1).appendChild(document.createElement("div"));
 				cell.style.height=userData[y].h+"px";
 				if (productHeader.vertical) {
 					cell.style.height=userData[y].h+"px";
@@ -141,6 +138,7 @@
 				$("#mainTableBody .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
 				var mainTableBody=document.getElementById("mainTableBody");
 				for (var y=0; y<userData.length; y++) {
+
 					var productHeader=productHeaders[userData[y].n];
 					var newCell=mainTableBody.rows[y].insertCell(numProducts+1).appendChild(document.createElement("div"));
 					newCell.contentEditable=true;
