@@ -84,7 +84,26 @@
 			for (var y = 0; y<@productHeaders.Count; y++ ) {
 				tr=document.createElement("tr");
 				tr.appendChild(th=document.createElement("th"));
+				
 				$(th).text(productHeaders[userData[y].n].displayName);
+				@*Create css-rule for row*@
+					var sheet=document.styleSheets[0];
+					var rules=sheet["rules"]||sheet["cssRules"]
+					
+					var selector="."+userData[y].n;
+					var rule="{height:"+userData[y].h+"px}";
+					if (sheet.insertRule)
+						sheet.insertRule(selector+rule, 0);
+					else
+						sheet.addRule(selector, rule, 0);
+					if (productHeaders[userData[y].n].vertical) {
+						var selector="."+userData[y].n+">div";
+						var rule="{width:"+userData[y].h+"px}";
+						if (sheet.insertRule)
+							sheet.insertRule(selector+rule, rules.length);
+						else
+							sheet.addRule(selector, rule, 0);
+					}
 				for (var x = 0; x<numProducts; x++) {
 					mainTableBody.appendChild(tr);
 					$(createCell(x,y))
@@ -92,15 +111,14 @@
 					.on("focus", cellOnFocus)
 					.data("productId", productDataArray[x][0])
 					.text(productDataArray[x][y+1])//switching x and y in order to transpose
-					.get().className+=" id"+productDataArray[x][0];@*Used to quickly select all the cells of a product*@
+					.get()[0].className+=" id"+productDataArray[x][0];@*Used to quickly select all the cells of a product*@
 				}
 			}
 			function createCell(x,y) {@*//creates a header-specific but not product-specific cell*@
 				var productHeader=productHeaders[userData[y].n];
 				var cell=document.getElementById("mainTableBody").children[y].insertCell(x+1).appendChild(document.createElement("div"));
-				cell.style.height=userData[y].h+"px";
+				cell.className+=" "+userData[y].n;@*give it a class which name equals its header-name*@
 				if (productHeader.vertical) {
-					cell.style.height=userData[y].h+"px";
 					cell.appendChild(cell=document.createElement("div"));
 					cell.className+=" vertical";
 				}
@@ -125,7 +143,6 @@
 				if (productHeader.vertical)
 					if (cssTransitionsSupported) {
 						cell.style.height="38px";//size needed for overflow:hidden to work
-						cell.style.width=userData[y].h+"px";
 						cell.className+=" rotatedCell";
 					}
 				return cell;
