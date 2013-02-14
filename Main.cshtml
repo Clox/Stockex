@@ -96,14 +96,13 @@
 						sheet.insertRule(selector+rule, 0);
 					else
 						sheet.addRule(selector, rule, 0);
-					if (productHeaders[userData[y].n].vertical) {
-						var selector="."+userData[y].n+">div";
-						var rule="{width:"+userData[y].h+"px}";
-						if (sheet.insertRule)
-							sheet.insertRule(selector+rule, rules.length);
-						else
-							sheet.addRule(selector, rule, 0);
-					}
+					if (cssTransitionsSupported)
+						if (productHeaders[userData[y].n].vertical) {
+							var selector="."+userData[y].n+">div";
+							var rule="{width:"+userData[y].h+"px}";
+							if (sheet.insertRule)
+								sheet.insertRule(selector+rule, rules.length);
+						}
 				for (var x = 0; x<numProducts; x++) {
 					mainTableBody.appendChild(tr);
 					$(createCell(x,y))
@@ -121,6 +120,8 @@
 				if (productHeader.vertical) {
 					cell.appendChild(cell=document.createElement("div"));
 					cell.className+=" vertical";
+					if (cssTransitionsSupported)
+						cell.className+=" rotatedCell";
 				}
 				cell.contentEditable=true;
 				if (!y)
@@ -140,11 +141,6 @@
 				}
 				if (productHeader.required)
 					cell.className+=" required";
-				if (productHeader.vertical)
-					if (cssTransitionsSupported) {
-						cell.style.height="38px";//size needed for overflow:hidden to work
-						cell.className+=" rotatedCell";
-					}
 				return cell;
 			}
 			//productDataArray=null;
