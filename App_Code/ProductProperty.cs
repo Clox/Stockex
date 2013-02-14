@@ -5,16 +5,15 @@ using System.Web;
 /// <summary>
 /// Summary description for ClassName
 /// </summary>
-public class ProductProperty
-{
-        public string name;
+public class ProductProperty{
         public string displayName;
         public string type;
         public bool required;
-        public ProductProperty (string name, string displayName, string type, bool required=false) {
-            this.name=name;
+		public bool vertical;
+        public ProductProperty (string displayName, string type, bool required=false, bool vertical=false) {
             this.displayName=displayName;
             this.type=type;
             this.required=required;
+			this.vertical=vertical;
     }
 }

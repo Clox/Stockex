@@ -33,12 +33,12 @@ input[type=text] {
 	border-color: #cccccc;
 	color: @tc1;
 }
-#mainTable td div {
-	padding-right: 3px;
-	padding-left: 3px;
-	width: 37px;
-	height: 20px;
-	overflow: hidden;
+#mainTable td>div {
+	width: 38px;
+	//overflow: hidden;
+}
+#mainTable .editable {
+
 }
 div {
 display: block;
@@ -46,7 +46,6 @@ display: block;
 #mainTable th {
 	background-color: @tc2;
 	color: @tc5;
-	padding-left: 5px;
 	border-style: solid;
 	border-width: 1px;
 	border-color: #cccccc;
@@ -82,10 +81,18 @@ thead th {
   vertical-align: top;
 }
 table .vertical {
-  white-space: nowrap;
-  text-align: center;
+	overflow: hidden;
+
+  text-align: left;
+  margin-top: 4px;
+  width: 100%;
+  	  -webkit-transform: rotate(90deg);
+  -moz-transform: rotate(90deg);
+  -webkit-transform-origin: 0 0 0;
+  writing-mode:tb-rl;
 }
-table .vertical div {
-	margin: auto;
+
+*:focus {
+    outline: none;
 }
 //Styles for rotateTableCellContent plugin end

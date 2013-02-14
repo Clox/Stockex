@@ -3,33 +3,33 @@
 	string activeCategory="sjokolade";
 
 	@*The following is a list of product-headers that are to be sent and that will be visible and editable in the html. Their order also determine the order in the html*@
-	List<ProductProperty> productProperties=new List<ProductProperty>{new ProductProperty("name", "Name", "string", true), new ProductProperty("ean", "EAN", "int"), new ProductProperty("epd", "EPD", "int", true), new ProductProperty("qntInUnit", "Quantity in Unit", "float"), new ProductProperty("unit", "Unit", "string"), new ProductProperty("producer", "Producer", "string")};
-	@*The following is a list of product-headers that are to be sent but which will be hidden in the html*@
-	//List<string> hiddenProductHeaders=new List<string>{"id"};
+	Dictionary<string, ProductProperty> productProperties =new Dictionary<string, ProductProperty>();
+	productProperties.Add("name",new ProductProperty("Name","string",true, true));
+	productProperties.Add("epd",new ProductProperty("EPD","int", false, true));
+	productProperties.Add("ean",new ProductProperty("EAN","string", false, true));
+	productProperties.Add("qntInUnit",new ProductProperty("Quantity in unit","float"));
+	productProperties.Add("unit",new ProductProperty("Unit","string"));
+	productProperties.Add("producer",new ProductProperty("Producer","string", false, true));
+
 	var db = Database.Open("products");
 	string queryCommand;
 
-	queryCommand="SELECT id";
-	for (int i=0; i<productProperties.Count; i++) {
-			queryCommand+=", ";
-		queryCommand+=productProperties[i].name;
-	}
-	
-	queryCommand+=" from products WHERE category = '"+activeCategory+"'";
+	queryCommand="SELECT id,"+String.Join(",",productProperties.Keys.ToArray())+" from products WHERE category = 'sjokolade'";
+
 	//selectCommand="SELECT name, ean, epd, qntInUnit, unit, producer from products WHERE category = 'sjokolade'";
 	var selectedData = db.Query(queryCommand);
 	string jsProductsData="[";
 
 	@*http://blogs.microsoft.co.il/blogs/pini_dayan/archive/2009/03/12/convert-objects-to-json-in-c-using-javascriptserializer.aspx*@
 	System.Web.Script.Serialization.JavaScriptSerializer oSerializer = new System.Web.Script.Serialization.JavaScriptSerializer();
-string sJSON = oSerializer.Serialize(productProperties);
+	string sJSON = oSerializer.Serialize(productProperties);
 
 	int productNum=0;
 		foreach(var product in selectedData){
 			jsProductsData+="["+product["id"];
-			for (int i=0; i<productProperties.Count; i++) {
+			foreach (string key in productProperties.Keys) {
 				jsProductsData+=",";
-				jsProductsData+="'"+product[productProperties[i].name.ToString()]+"'";
+				jsProductsData+="'"+product[key]+"'";
 			}
 			jsProductsData+="],";
 			if (productNum<selectedData.Count()) {
@@ -37,6 +37,8 @@ string sJSON = oSerializer.Serialize(productProperties);
 			}
 		}
 		jsProductsData+="]";
+
+		var userData=db.QueryValue("SELECT productProperties FROM userData WHERE userName ='oggan'");
 }
 <!DOCTYPE html>
 
@@ -57,7 +59,6 @@ string sJSON = oSerializer.Serialize(productProperties);
 		</div>
 		<div id="addNewProduct"></div>
 		<script type="text/javascript">
-			
 			var productProps=@Html.Raw(sJSON);
 			var productDataArray=@Html.Raw(jsProductsData);
 			var mainTableBodyInnerHTML = "";
@@ -68,28 +69,45 @@ string sJSON = oSerializer.Serialize(productProperties);
 			var category="sjokolade";
 			var pendingProductCreations={};@*Whenever a product-creation request is sent to server, the jqXHR object is stored in this variable, with the productClientId as key. When the request finishes the jqXHR object reference is immediately removed
 			If a cell-edit is commited to a project which creation is pending, the cell-edit-ajax-request is added as done() to the jqXHR so that it is sent once the product is present on server and the id is known*@
-
+			var userData=@Html.Raw(userData);
 			var mainTableBody=document.getElementById("mainTableBody");
 			var tr, td, th, cell, cellValue;
+			@*determine if rotation is supported - start*@
+			var div = document.createElement('div');
+			div.setAttribute('style', 'transition:top 1s ease;-webkit-transition:top 1s ease;-moz-transition:top 1s ease;-o-transition:top 1s ease;');
+			document.body.appendChild(div);
+			var cssTransitionsSupported = !!(div.style.transition || div.style.webkitTransition || div.style.MozTransition || div.style.OTransitionDuration);
+			div.parentNode.removeChild(div);
+			div = null;
+			@*determine if rotation is supported - end*@
 			for (var x = 0; x<@productProperties.Count; x++ ) {
 				tr=document.createElement("tr");
 				tr.appendChild(th=document.createElement("th"));
-				$(th).text(productProps[x].displayName);
+				var product=productProps[userData[x].n];
+				$(th).text(product.displayName);
 				for (var y = 0; y<numProducts; y++) {
 					tr.appendChild(td=document.createElement("td"));
 					td.appendChild(cell=document.createElement("div"));
+					cell.style.height=userData[x].h+"px";
+					if (product.vertical) {
+						cell.style.width="38px";
+						cell.style.height=userData[x].h+"px";
+						cell.appendChild(cell=document.createElement("div"));
+						cell.className+=" vertical";
+
+					}
 					cell.contentEditable=true;
-					cell.className="editable";
+					cell.className+=" editable";
 					if (!x)
-						cell.className+=" vertical nameRow";@*second classname is used when finding the name-cell during product creation for setting as context in ajax-call*@
+						cell.className+=" nameRow";@*used when finding the name-cell during product creation for setting as context in ajax-call*@
 					cell.className+=" id"+productDataArray[y][0];@*Used to quickly select all the cells of a product*@
 					cell.spellcheck=false;
 					$(cell).on("blur", cellOnBlur)
 					.on("focus", cellOnFocus)
-					.data("productHeader", productProps[x].name)
+					.data("productHeader", userData[x].n)
 					.data("productId", productDataArray[y][0])
 					.text(productDataArray[y][x+1]);
-					switch (productProps[x].type) {
+					switch (product.type) {
 						case "int":
 							$(cell).keypress(intValidateInput).on("paste", intValidatePaste);
 						break
@@ -100,8 +118,14 @@ string sJSON = oSerializer.Serialize(productProperties);
 							$(cell).keypress(floatValidateInput).on("paste", floatValidatePaste);
 						break;
 					}
-					if (productProps[x].required)
+					if (product.required)
 						cell.className+=" required";
+					if (product.vertical)
+						if (cssTransitionsSupported) {
+							cell.style.height="38px";
+							cell.style.width=userData[x].h+"px";
+							cell.style.marginRight="38px";
+						}
 				}
 				mainTableBody.appendChild(tr);
 			}
