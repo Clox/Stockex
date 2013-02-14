@@ -44,6 +44,7 @@
 
 <html lang="en">
 	<head>
+		<meta http-equiv="X-UA-Compatible" content="IE=7" />
 		<meta charset="utf-8" />
 		<title>Stockex</title>
 		<link rel="stylesheet" type="text/css" href="stockexStyle.css">
@@ -122,13 +123,14 @@
 						cell.className+=" required";
 					if (product.vertical)
 						if (cssTransitionsSupported) {
-							cell.style.height="38px";
+							cell.style.height="38px";//size needed for overflow:hidden to work
 							cell.style.width=userData[x].h+"px";
-							cell.style.marginRight="38px";
+							cell.className+=" rotatedCell";
 						}
 				}
 				mainTableBody.appendChild(tr);
 			}
+
 			//productDataArray=null;
 			document.getElementById("addNewProduct").onclick=addNewProduct;
 
@@ -324,3 +326,8 @@
 		</script>
 	</body>
 </html>
+@*//if needed to create cssRule
+			var sheet=document.styleSheets[0];
+var rules=sheet["rules"]||sheet["cssRules"]
+sheet.insertRule(".vertical{margin-left:38px}", 0);
+*@
