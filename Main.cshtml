@@ -89,7 +89,8 @@
 					mainTableBody.appendChild(tr);
 					$(createCell(x,y))
 					.data("productId", productDataArray[x][0])
-					.text(productDataArray[x][y+1]);//switching x and y in order to transpose
+					.text(productDataArray[x][y+1])//switching x and y in order to transpose
+					.get().className+=" id"+productDataArray[x][0];@*Used to quickly select all the cells of a product*@
 				}
 			}
 			function createCell(x,y) {@*//creates a header-specific but not product-specific cell*@
@@ -102,10 +103,8 @@
 					cell.className+=" vertical";
 				}
 				cell.contentEditable=true;
-				cell.className+=" editable";
 				if (!y)
 					cell.className+=" nameRow";@*used when finding the name-cell during product creation for setting as context in ajax-call*@
-				cell.className+=" id"+productDataArray[x][0];@*Used to quickly select all the cells of a product*@
 				cell.spellcheck=false;
 				$(cell).on("blur", cellOnBlur)
 				.on("focus", cellOnFocus)
@@ -135,33 +134,13 @@
 			document.getElementById("addNewProduct").onclick=addNewProduct;
 
 			function addNewProduct() {@*Function for "creating a new" empty product on client-side before sending to server*@
-				$("#mainTableBody .editable").attr("contenteditable", false);@*Make all cells non editable while creating new product*@
 				var mainTableBody=document.getElementById("mainTableBody");
 				for (var y=0; y<userData.length; y++) {
-
-					var productHeader=productHeaders[userData[y].n];
-					var newCell=mainTableBody.rows[y].insertCell(numProducts+1).appendChild(document.createElement("div"));
-					newCell.contentEditable=true;
-					newCell.className="newProductInput editable cid"+productClientId;
+					var newCell=createCell(x,y);
+					newCell.className+=" newProductInput cid"+productClientId;
 					if (!y)
-					newCell.className+=" nameRow";	
-					newCell.spellcheck=false;
-			//test
-					if (productHeader.required)
-						newCell.className+=" required";
-					switch (productHeader.type) {
-						case "int":
-							$(newCell).keypress(intValidateInput).on("paste", intValidatePaste);
-						break;
-						case "string":
-							$(newCell).keypress(stringValidateInput).on("paste", stringValidatePaste);
-						break;
-						case "float":
-							$(newCell).keypress(floatValidateInput).on("paste", floatValidatePaste);
-					}
-					if (!y)
-					newCell.focus();
-					$(newCell).data("productHeader", productHeader.name).data("productClientId",productClientId);
+						newCell.focus();
+					$(newCell).data("productClientId",productClientId);
 					
 				}
 				var buttonContainer;
@@ -241,7 +220,6 @@
 						return;
 					}
 				}
-				$("#mainTableBody .editable").attr("contenteditable", true);@*Make all cells editable again*@
 				document.getElementById("addNewProduct").style.visibility="visible";
 				$("#newProductButtonContainer").remove();
                 
@@ -273,7 +251,6 @@
 			$(document.body).focus();
 				$("#mainTableBody th:last-child, #mainTableBody td:last-child").remove();
 				document.getElementById("addNewProduct").style.visibility="visible";
-				$("#mainTableBody .editable").attr("contenteditable", true);@*Make all cells editable again*@
 				$("#newProductButtonContainer").remove();
 			}
 			function cellOnFocus(event) {
